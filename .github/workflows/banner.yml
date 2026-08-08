@@ -1,0 +1,65 @@
+name: refresh banner
+
+# Regenerate the profile banner from live contribution data.
+# Commits only when the rendered SVGs actually change, so the history stays
+# meaningful instead of a daily no-op commit.
+
+on:
+  schedule:
+    - cron: "17 4 * * *"   # daily, 04:17 UTC (off the hour, less API contention)
+  workflow_dispatch:        # so it can be run by hand from the Actions tab
+  push:
+    paths:
+      - make_banner.py      # re-render immediately when the design changes
+      - .github/workflows/banner.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-banner
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # restrictedContributionsCount (the private commit count) is only visible to a
+      # token acting AS the user. The built-in GITHUB_TOKEN is repo-scoped and returns
+      # 0 there, which would quietly publish a banner claiming no private work.
+      - name: Fetch live contribution stats
+        env:
+          GH_STATS_TOKEN: ${{ secrets.GH_STATS_TOKEN }}
+        # fetch_stats.py refuses to write on failure so a bad API day can never
+        # publish zeros; when that happens we render from the committed stats.json
+        run: python fetch_stats.py || echo "fetch failed, rendering from committed stats.json"
+
+      - name: Render banners
+        run: python make_banner.py
+
+      - name: Verify output is well-formed
+        run: |
+          python - <<'PY'
+          import xml.dom.minidom as m
+          for f in ("assets/banner-dark.svg", "assets/banner-light.svg"):
+              m.parse(f)
+              print(f, "ok")
+          PY
+
+      - name: Commit if the numbers moved
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/banner-dark.svg assets/banner-light.svg stats.json
+          if git diff --staged --quiet; then
+            echo "no change, nothing to commit"
+          else
+            git commit -m "Refresh banner from live contribution data"
+            git push
+          fi
