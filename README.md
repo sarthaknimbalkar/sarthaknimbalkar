@@ -85,8 +85,6 @@ It didn't start there. In 2019, I could barely make a script do one thing. So I 
 
 The hard part was never the code. It's the judgment. An agent working alone at 4am is just running a decision I already made once, well enough that it holds while I sleep. **A system is a cast of its maker's mind.** So I don't build timid ones. A tool nobody dares trust proves nothing about the person who made it. Mine run for fourteen hours with the room empty, and I stand behind every call they make in it.
 
-<sub>My busiest day this year was 185 commits. I found out weeks later, in the stats. A graph counts the days. It can't tell you what they cost.</sub>
-
 <br>
 
 <div align="center">
